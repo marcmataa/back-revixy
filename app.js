@@ -7,6 +7,7 @@ import authRoutes from "./src/routes/auth.routes.js";
 import integrationRoutes from "./src/routes/integration.routes.js";
 import storeRoutes from "./src/routes/store.routes.js";
 import statsRoutes from "./src/routes/stats.routes.js";
+import aiRoutes from "./src/routes/ai.routes.js";
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/integrations", integrationRoutes);
 app.use("/api/store", storeRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
