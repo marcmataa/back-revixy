@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { globalLimiter } from "./src/middleware/rateLimit.middleware.js";
 import authRoutes from "./src/routes/auth.routes.js";
 import integrationRoutes from "./src/routes/integration.routes.js";
+import storeRoutes from "./src/routes/store.routes.js";
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use("/api", globalLimiter);
 // ─── RUTAS ────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/integrations", integrationRoutes);
+app.use("/api/store", storeRoutes);
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
