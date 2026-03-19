@@ -6,7 +6,7 @@ import { validateRegister, validateLogin } from "../middleware/validate.middlewa
 import { authLimiter, refreshLimiter } from "../middleware/rateLimit.middleware.js";
 
 // ─── RUTAS PÚBLICAS ───────────────────────────────────────────────────────
-
+const router = express.Router();
 // POST /api/auth/register
 router.post(
   "/register",

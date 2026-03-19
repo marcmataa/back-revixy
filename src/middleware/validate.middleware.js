@@ -1,5 +1,5 @@
 // src/middleware/validate.middleware.js
-const { body, validationResult } = require("express-validator");
+import { body, validationResult } from "express-validator";
 
 /**
  * Ejecuta los resultados de validación y responde con errores si los hay
@@ -61,4 +61,4 @@ const validateLogin = [
   handleValidation,
 ];
 
-module.exports = { validateRegister, validateLogin };
+export { validateRegister, validateLogin };

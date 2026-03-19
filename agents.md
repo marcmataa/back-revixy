@@ -16,7 +16,6 @@ Identify and follow the specialized skill before any task:
 - Data Engineering (ETL): @skills/data_engine.md
 - Integrations (Shopify/Meta): @skills/integrations.md
 - AI Logic & Insights: @skills/ai_layer.md
-- Frontend & UI: @skills/frontend.md
 
 ## 4. UNIVERSAL BUSINESS LOGIC (THE "HOLY GRAIL")
 - **Net Profit:** (Gross Revenue - Refunds) - (Meta Spend + COGS + Gateway Fees + Shipping).
@@ -83,3 +82,18 @@ When generating code, always provide:
 - **Seasonality Awareness:** Compare "Today" vs "Same day last week" to detect natural patterns.
 - **Statistical Significance:** If the sample size (Spend/Impressions) is too low, the AI must state: "DATA_INSUFFICIENT" instead of giving a recommendation.
 - **Anomaly Detection:** Identify if a drop in profit is a trend or a one-time event (e.g., a tracking pixel failure or a payment gateway down).
+
+## 16. EXISTING CODEBASE (DO NOT OVERWRITE)
+The following modules are already implemented and tested:
+- `server.js` — Entry point, graceful shutdown
+- `app.js` — Express config, CORS, security headers
+- `src/config/db.js` — MongoDB connection
+- `src/models/User.model.js` — User schema with bcrypt + account locking
+- `src/services/auth.service.js` — Register, login, refresh, logout
+- `src/controllers/auth.controller.js` — Auth HTTP handlers
+- `src/middleware/auth.middleware.js` — JWT protect + restrictTo
+- `src/middleware/validate.middleware.js` — Input validation
+- `src/middleware/rateLimit.middleware.js` — Rate limiting
+- `src/routes/auth.routes.js` — Auth routes
+
+**Next modules to build:** Store.model.js, DailyStats.model.js, ActionLogs.model.js

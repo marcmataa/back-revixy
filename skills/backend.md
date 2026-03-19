@@ -11,6 +11,9 @@ Follow the **Controller → Service → Repository → Model** pattern:
 - **Stack:** Node.js (ESM), Express, MongoDB.
 - **Performance:** Use `.lean()` for reads. Use **projections** to avoid loading unnecessary fields.
 - **Scalability:** Use pagination for large datasets. Optimize aggregation pipelines.
+- **ESM Imports:** Always include `.js` extension in all import paths 
+  (e.g., `import User from '../models/User.model.js'`).
+```
 
 ## 3. MANDATORY RESPONSE FORMAT
 Every API response MUST follow:
