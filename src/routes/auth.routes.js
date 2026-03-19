@@ -1,11 +1,9 @@
 // src/routes/auth.routes.js
-const express = require("express");
-const router = express.Router();
-
-const authController = require("../controllers/auth.controller");
-const { protect } = require("../middleware/auth.middleware");
-const { validateRegister, validateLogin } = require("../middleware/validate.middleware");
-const { authLimiter, refreshLimiter } = require("../middleware/rateLimit.middleware");
+import express from "express";
+import * as authController from "../controllers/auth.controller.js";
+import { protect } from "../middleware/auth.middleware.js";
+import { validateRegister, validateLogin } from "../middleware/validate.middleware.js";
+import { authLimiter, refreshLimiter } from "../middleware/rateLimit.middleware.js";
 
 // ─── RUTAS PÚBLICAS ───────────────────────────────────────────────────────
 
@@ -40,4 +38,4 @@ router.post("/logout", protect, authController.logout);
 // GET /api/auth/me
 router.get("/me", protect, authController.getMe);
 
-module.exports = router;
+export default router;

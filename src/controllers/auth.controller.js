@@ -1,5 +1,5 @@
 // src/controllers/auth.controller.js
-const authService = require("../services/auth.service");
+import * as authService from "../services/auth.service.js";
 
 // ─── OPCIONES DE COOKIE ───────────────────────────────────────────────────
 const cookieOptions = {
@@ -113,4 +113,4 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, login, refresh, logout, getMe };
+export { register, login, refresh, logout, getMe };

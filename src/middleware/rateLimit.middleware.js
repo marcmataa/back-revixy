@@ -1,5 +1,5 @@
 // src/middleware/rateLimit.middleware.js
-const rateLimit = require("express-rate-limit");
+import rateLimit from "express-rate-limit";
 
 /**
  * Rate limiter global para todas las rutas de la API
@@ -42,4 +42,4 @@ const refreshLimiter = rateLimit({
   },
 });
 
-module.exports = { globalLimiter, authLimiter, refreshLimiter };
+export { globalLimiter, authLimiter, refreshLimiter };

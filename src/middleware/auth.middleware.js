@@ -1,6 +1,6 @@
 // src/middleware/auth.middleware.js
-const jwt = require("jsonwebtoken");
-const User = require("../models/User.model");
+import jwt from "jsonwebtoken";
+import User from "../models/User.model.js";
 
 /**
  * Middleware: Verifica el JWT del header Authorization
@@ -82,4 +82,4 @@ const restrictTo = (...roles) => {
   };
 };
 
-module.exports = { protect, restrictTo };
+export { protect, restrictTo };

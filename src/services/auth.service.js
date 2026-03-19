@@ -1,6 +1,6 @@
 // src/services/auth.service.js
-const jwt = require("jsonwebtoken");
-const User = require("../models/User.model");
+import jwt from "jsonwebtoken";
+import User from "../models/User.model.js";
 
 // ─── HELPERS JWT ──────────────────────────────────────────────────────────
 
@@ -158,4 +158,4 @@ const getProfile = async (userId) => {
   return user;
 };
 
-module.exports = { register, login, refreshTokens, logout, getProfile };
+export { register, login, refreshTokens, logout, getProfile };
