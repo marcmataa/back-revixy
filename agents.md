@@ -16,6 +16,7 @@ Identify and follow the specialized skill before any task:
 - Data Engineering (ETL): @skills/data_engine.md
 - Integrations (Shopify/Meta): @skills/integrations.md
 - AI Logic & Insights: @skills/ai_layer.md
+- Authentication & OAuth: @skills/auth.md
 
 ## 4. UNIVERSAL BUSINESS LOGIC (THE "HOLY GRAIL")
 - **Net Profit:** (Gross Revenue - Refunds) - (Meta Spend + COGS + Gateway Fees + Shipping).
