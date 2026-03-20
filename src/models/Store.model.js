@@ -153,23 +153,13 @@ const storeSchema = new mongoose.Schema(
 );
 
 // Ciframos el token solo cuando se guarda y fue modificado.
-storeSchema.pre("save", function preSaveAccessToken(next) {
-  try {
-    // Nota: usamos function() para conservar el binding correcto de Mongoose.
-    if (!this.isModified("accessToken")) return next();
-
-    if (typeof this.accessToken !== "string" || !this.accessToken) {
-      return next(new Error("accessToken inválido para cifrar"));
-    }
-
-    // Si ya está cifrado, evitamos doble cifrado.
-    if (this.accessToken.startsWith("enc:")) return next();
-
-    this.accessToken = encryptAccessToken(this.accessToken);
-    return next();
-  } catch (err) {
-    return next(err);
+storeSchema.pre("save", function preSaveAccessToken() {
+  if (!this.isModified("accessToken")) return;
+  if (typeof this.accessToken !== "string" || !this.accessToken) {
+    throw new Error("accessToken inválido para cifrar");
   }
+  if (this.accessToken.startsWith("enc:")) return;
+  this.accessToken = encryptAccessToken(this.accessToken);
 });
 
 // Método para obtener el token en claro bajo demanda.

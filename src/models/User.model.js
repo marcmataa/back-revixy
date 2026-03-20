@@ -68,14 +68,11 @@ userSchema.virtual("isLocked").get(function () {
 });
 
 // ─── MIDDLEWARE: Hash de contraseña antes de guardar ──────────────────────
-userSchema.pre("save", async function (next) {
-  // Solo hashear si la contraseña fue modificada
-  if (!this.isModified("password")) return next();
-
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
   const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
   this.password = await bcrypt.hash(this.password, rounds);
   this.passwordChangedAt = new Date();
-  next();
 });
 
 // ─── MÉTODO: Comparar contraseña ──────────────────────────────────────────
