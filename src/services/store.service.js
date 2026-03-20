@@ -1,13 +1,15 @@
 import Store from "../models/Store.model.js";
 import ActionLogs from "../models/ActionLogs.model.js";
 
-const ALLOWED_ROOT_FIELDS = new Set(["timezone", "currency"]);
+const ALLOWED_ROOT_FIELDS = new Set(["timezone", "currency", "monthlyGoals", "language",]);
 const ALLOWED_SETTINGS_FIELDS = new Set([
   "defaultMarginPercent",
   "defaultGatewayFeePercent",
   "defaultGatewayFeeFixed",
   "defaultShippingCost",
   "executionMode",
+  "strategy",
+  "industry", 
 ]);
 
 const createError = (message, statusCode) => {

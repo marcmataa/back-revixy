@@ -9,7 +9,10 @@ function encryptAccessToken(plainTextToken) {
     throw new Error("ENCRYPTION_KEY no definida en el entorno");
   }
 
-  const key = crypto.createHash("sha256").update(String(encryptionKey)).digest(); // 32 bytes
+  const key = crypto
+    .createHash("sha256")
+    .update(String(encryptionKey))
+    .digest(); // 32 bytes
   const iv = crypto.randomBytes(16); // tamaño IV recomendado para AES-CBC
 
   const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
@@ -26,7 +29,10 @@ function decryptAccessToken(encryptedToken) {
     throw new Error("ENCRYPTION_KEY no definida en el entorno");
   }
 
-  if (typeof encryptedToken !== "string" || !encryptedToken.startsWith("enc:")) {
+  if (
+    typeof encryptedToken !== "string" ||
+    !encryptedToken.startsWith("enc:")
+  ) {
     // Si por cualquier motivo llega sin prefijo, lo devolvemos tal cual.
     return encryptedToken;
   }
@@ -38,7 +44,10 @@ function decryptAccessToken(encryptedToken) {
   }
 
   const [, ivBase64, cipherBase64] = parts;
-  const key = crypto.createHash("sha256").update(String(encryptionKey)).digest();
+  const key = crypto
+    .createHash("sha256")
+    .update(String(encryptionKey))
+    .digest();
   const iv = Buffer.from(ivBase64, "base64");
 
   const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
@@ -77,6 +86,11 @@ const storeSchema = new mongoose.Schema(
       default: "EUR",
       trim: true,
     },
+    language: {
+      type: String,
+      enum: ["es", "en", "ca"],
+      default: "es",
+    },
     timezone: {
       type: String,
       required: [true, "El timezone es obligatorio"],
@@ -110,7 +124,7 @@ const storeSchema = new mongoose.Schema(
       },
       defaultGatewayFeeFixed: {
         type: Number,
-        default: 25, // 0.25€ en cents
+        default: 25,
         validate: {
           validator: Number.isInteger,
           message: "defaultGatewayFeeFixed debe ser un entero (cents)",
@@ -128,6 +142,30 @@ const storeSchema = new mongoose.Schema(
         type: String,
         enum: ["READ_ONLY", "COPILOT", "AUTOPILOT"],
         default: "COPILOT",
+      },
+      strategy: {
+        type: String,
+        enum: ["PROFIT", "GROWTH", "BALANCED"],
+        default: "BALANCED",
+      },
+      industry: {
+        type: String,
+        enum: ["FASHION", "ELECTRONICS", "COSMETICS", "FOOD", "HOME", "OTHER"],
+        default: "OTHER",
+      },
+    },
+    monthlyGoals: {
+      targetRevenue: {
+        type: Number,
+        default: 0, // en cents
+      },
+      targetROAS: {
+        type: Number,
+        default: 0,
+      },
+      targetAdSpend: {
+        type: Number,
+        default: 0, // en cents
       },
     },
   },
@@ -149,7 +187,7 @@ const storeSchema = new mongoose.Schema(
         return ret;
       },
     },
-  }
+  },
 );
 
 // Ciframos el token solo cuando se guarda y fue modificado.
@@ -163,15 +201,15 @@ storeSchema.pre("save", function preSaveAccessToken() {
 });
 
 // Método para obtener el token en claro bajo demanda.
-storeSchema.methods.getDecryptedAccessToken = function getDecryptedAccessToken() {
-  if (!this.accessToken) {
-    // Como accessToken tiene select:false, se requiere explícitamente:
-    // Store.find(...).select("+accessToken")
-    throw new Error("accessToken no cargado. Usa .select('+accessToken')");
-  }
-  return decryptAccessToken(this.accessToken);
-};
+storeSchema.methods.getDecryptedAccessToken =
+  function getDecryptedAccessToken() {
+    if (!this.accessToken) {
+      // Como accessToken tiene select:false, se requiere explícitamente:
+      // Store.find(...).select("+accessToken")
+      throw new Error("accessToken no cargado. Usa .select('+accessToken')");
+    }
+    return decryptAccessToken(this.accessToken);
+  };
 
 const Store = mongoose.model("Store", storeSchema);
 export default Store;
-
