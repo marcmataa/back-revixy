@@ -283,7 +283,7 @@ function buildMessagesArray(
   
   if (contextPart.length > maxChars) {
     // Cortamos y añadimos un cierre manual para intentar que el JSON sea "menos" traumático
-    contextPart = contextPart.slice(0, maxChars) + "\n... [Datos truncados por espacio] } }";
+    contextPart = contextPart.slice(0, maxChars) + "\n... [Datos truncados por espacio]";
   }
 
   // 4. Reconstruimos
