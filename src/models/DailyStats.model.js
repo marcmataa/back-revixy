@@ -136,7 +136,7 @@ const dailyStatsSchema = new mongoose.Schema(
       type: [
         {
           type: String,
-          enum: ["LOW_ROAS", "HIGH_CPC", "STOCK_RISK", "LOW_CONFIDENCE", "PROFIT_NEGATIVE"],
+          enum: ["LOW_ROAS", "HIGH_CPC", "STOCK_RISK", "LOW_CONFIDENCE", "PROFIT_NEGATIVE", "SCALE_OPPORTUNITY", "CTR_DECLINING", "REVENUE_DROP"],
         },
       ],
       default: [],
