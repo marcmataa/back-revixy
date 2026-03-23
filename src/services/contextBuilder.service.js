@@ -38,7 +38,7 @@ function getTodayInTimezone(timezone = "UTC") {
   }
 }
 
-export const buildSystemPrompt = (store) => {
+const buildSystemPrompt = (store) => {
   const currency = store?.currency || "EUR";
   const mode = store?.settings?.executionMode || "COPILOT";
   const margin = store?.settings?.defaultMarginPercent || 0;

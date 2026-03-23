@@ -1,6 +1,11 @@
 // src/routes/auth.routes.js
 import express from "express";
 import * as authController from "../controllers/auth.controller.js";
+import {
+  googleInitiate,
+  googleCallback,
+  getOAuthToken,
+} from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { validateRegister, validateLogin } from "../middleware/validate.middleware.js";
 import { authLimiter, refreshLimiter } from "../middleware/rateLimit.middleware.js";
@@ -29,6 +34,15 @@ router.post(
   refreshLimiter,
   authController.refresh
 );
+
+// GET /api/auth/google — inicia el flujo OAuth con Google
+router.get("/google", googleInitiate);
+
+// GET /api/auth/google/callback — Google redirige aquí tras autorizar o cancelar
+router.get("/google/callback", googleCallback);
+
+// GET /api/auth/token — el frontend intercambia la cookie de handoff por el accessToken
+router.get("/token", getOAuthToken);
 
 // ─── RUTAS PROTEGIDAS (requieren JWT válido) ──────────────────────────────
 

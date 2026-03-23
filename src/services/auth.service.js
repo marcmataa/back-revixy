@@ -82,6 +82,14 @@ const login = async ({ email, password }) => {
   }
 
   // Verificar contraseña
+  // SEGURIDAD: Prevenimos error de bcrypt si el usuario no tiene contraseña local
+  if (user.authProvider === "google") {
+    const error = new Error(
+      "Esta cuenta utiliza Google. Inicia sesión con Google o establece una contraseña primero."
+    );
+    error.statusCode = 400;
+    throw error;
+  }
   const isMatch = await user.comparePassword(password);
 
   if (!isMatch) {
@@ -104,6 +112,88 @@ const login = async ({ email, password }) => {
   await user.save({ validateBeforeSave: false });
 
   return { user, accessToken, refreshToken };
+};
+
+// ─── SERVICIO: GOOGLE AUTH (OAUTH 2.0) ─────────────────────────────────────
+
+// Upsert de usuario via Google con prevención de account takeover
+const googleAuth = async (profile) => {
+  const email = profile.emails?.[0]?.value;
+  const googleId = profile.id;
+  const name = profile.displayName || profile.name?.givenName || "User";
+  const rawAvatar = profile.photos?.[0]?.value || null;
+  // Solo guardamos avatars HTTPS — nunca HTTP
+  const avatar = rawAvatar?.startsWith("https://") ? rawAvatar : null;
+
+  if (!email) {
+    const err = new Error("Google profile missing email");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Caso 1: Ya tiene googleId → login directo
+  // Usamos .select("+googleId") porque googleId tiene select: false en el modelo
+  let user = await User.findOne({ googleId }).select("+googleId");
+  if (user) {
+    const tokens = signTokens(user);
+    user.refreshToken = tokens.refreshToken;
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+    return { user, ...tokens };
+  }
+
+  // Caso 2: Existe email sin googleId — buscamos por email (no necesita select especial)
+  user = await User.findOne({ email });
+  if (user) {
+    // SEGURIDAD CRÍTICA: Solo vinculamos si el email está verificado
+    // Evitamos account takeover si alguien registró el email sin verificarlo
+    if (!user.isEmailVerified) {
+      const err = new Error("Verifica tu email antes de vincular Google.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // Vinculamos Google — actualizamos authProvider según state machine
+    // local → both | google → google (ya tiene googleId, no debería llegar aquí)
+    user.googleId = googleId;
+    user.avatar = avatar || user.avatar;
+    user.authProvider = user.authProvider === "local" ? "both" : user.authProvider;
+
+    const tokens = signTokens(user);
+    user.refreshToken = tokens.refreshToken;
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+    return { user, ...tokens };
+  }
+
+  // Caso 3: Usuario nuevo via Google
+  // Protección contra race condition — manejamos duplicate key (code 11000)
+  try {
+    user = await User.create({
+      name,
+      email,
+      googleId,
+      avatar,
+      authProvider: "google",
+      isEmailVerified: true, // Google garantiza ownership del email
+      isActive: true,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      // Condición de carrera — otro request creó el usuario simultáneamente
+      // Recuperamos el usuario ganador y continuamos sin romper el flujo
+      user = await User.findOne({ email });
+      if (!user) throw new Error("Unexpected race condition in user creation");
+    } else {
+      throw error;
+    }
+  }
+
+  const tokens = signTokens(user);
+  user.refreshToken = tokens.refreshToken;
+  user.lastLogin = new Date();
+  await user.save({ validateBeforeSave: false });
+  return { user, ...tokens };
 };
 
 // ─── SERVICIO: REFRESH TOKEN ──────────────────────────────────────────────
@@ -158,4 +248,4 @@ const getProfile = async (userId) => {
   return user;
 };
 
-export { register, login, refreshTokens, logout, getProfile };
+export { register, login, googleAuth, refreshTokens, logout, getProfile };

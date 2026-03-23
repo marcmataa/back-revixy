@@ -24,7 +24,9 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "La contraseña es obligatoria"],
+      required: function () {
+        return this.authProvider === "local";
+      },
       minlength: [8, "La contraseña debe tener al menos 8 caracteres"],
       select: false, // ⚠️ No se devuelve en queries por defecto
     },
@@ -53,6 +55,29 @@ const userSchema = new mongoose.Schema(
     },
     passwordChangedAt: {
       type: Date,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // Permite múltiples nulls — usuarios sin Google login
+      select: false, // Nunca exponer googleId en respuestas de API
+    },
+    avatar: {
+      type: String,
+      default: null,
+      validate: {
+        validator: (v) => !v || v.startsWith("https://"),
+        message: "Avatar must be a secure HTTPS URL",
+      },
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google", "both"],
+      default: "local",
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   {

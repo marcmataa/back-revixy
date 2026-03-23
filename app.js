@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import passport from "./src/config/passport.config.js";
 import { globalLimiter } from "./src/middleware/rateLimit.middleware.js";
 import authRoutes from "./src/routes/auth.routes.js";
 import integrationRoutes from "./src/routes/integration.routes.js";
@@ -47,7 +48,8 @@ app.use((req, res, next) => {
 // ─── PARSERS ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "10kb" }));        // Limitar tamaño del body
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET));
+app.use(passport.initialize());
 
 // ─── RATE LIMITING GLOBAL ─────────────────────────────────────────────────
 app.use("/api", globalLimiter);
