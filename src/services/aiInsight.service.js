@@ -398,17 +398,91 @@ async function simulateAction(storeId, action) {
       store: { currency: store.currency, settings: store.settings },
     });
 
-    const messages = [
-      {
-        role: "system",
-        content:
-          "You are REVIXY simulation engine. Use only provided context and produce best/worst case impact with confidence from 0-100.",
-      },
-      {
-        role: "user",
-        content: `<user_query>Simulate this action: ${JSON.stringify(actionPayload)}</user_query>`,
-      },
-    ];
+   const messages = [
+  {
+    role: "system",
+    content: buildSystemPrompt(store) + `
+
+## SIMULATION MODE — ACTIVE
+You are now in financial simulation mode. Your ONLY task is to estimate the impact of the proposed action.
+
+### HIDDEN REASONING STEP (run this BEFORE generating any output — never show this to the user)
+0. **GOLDEN CALCULATION RULE:** Convert ALL values from CENTS to ${store?.currency || "EUR"} (value / 100) BEFORE any mathematical operation. Example: adSpend 50000 → 500,00 ${store?.currency || "EUR"}. Never mix cents and currency units in the same calculation.
+1. Calculate CPA: (adSpend / 100) / clicks = CPA in ${store?.currency || "EUR"}
+2. Calculate AOV: (grossRevenue / 100) / orderCount = AOV in ${store?.currency || "EUR"}
+3. Calculate lost orders if pausing: (adSpend / 100 per day) / CPA = estimated lost orders
+4. Calculate gross revenue loss: lost orders × AOV
+5. Apply Halo Effect: add 5-10% to revenue loss for indirect traffic impact
+6. Apply 20% Rule: pessimistic scenario must show at least 20% negative deviation from current ROAS
+7. Validate: do your estimates make mathematical sense with the provided data?
+Only THEN generate the response.
+
+### SIMULATION RULES (NON-NEGOTIABLE)
+1. Use ONLY data provided in the business context. Never invent metrics.
+2. **CENTS RULE:** All values in context are in CENTS. Always divide by 100 before showing or calculating. Output always in ${store?.currency || "EUR"}.
+3. Express impact as a RANGE — never a single number.
+4. Base estimates on the last 7 days of provided data.
+5. If confidenceScore < 60 or data is insufficient → return JSON with error: "SIMULATION_INSUFFICIENT_DATA"
+6. Never recommend executing an action without explicitly stating the risk.
+7. **Halo Effect:** Pausing a Top-of-Funnel campaign reduces organic and retargeting traffic by an additional 5-10% beyond direct revenue.
+8. **20% Rule:** Pessimistic scenario must contemplate at least 20% negative deviation from current ROAS.
+9. **Diminishing Returns:** Never assume linear scaling. SCALE_BUDGET revenue increase = additional spend × blendedROAS × 0.7
+10. **Attribution window:** Meta Ads data has a 7-day attribution delay. Impact may not be visible for 3-7 days.
+11. **Dynamic params:** Use any numeric values present in the action params to feed the formulas, regardless of the key name. Example: if params contains { amount: 100 } or { percent: 20 } or { budgetIncrease: 500 }, use whatever numeric value is present.
+
+### ACTION-SPECIFIC CALCULATIONS
+- **PAUSE_CAMPAIGN:**
+  → Daily adSpend saved: (adSpend / 100) / 7
+  → Estimated lost orders: daily adSpend saved / CPA
+  → Gross revenue loss: lost orders × AOV
+  → Halo Effect loss: gross revenue loss × 0.075 (7.5% midpoint)
+  → Net saving: daily adSpend saved − gross revenue loss − halo effect loss
+
+- **SCALE_BUDGET:**
+  → Additional spend (from params, any numeric key): convert to ${store?.currency || "EUR"} if in cents
+  → Expected revenue (diminishing returns): additional spend × blendedROAS × 0.7
+  → Risk check: if blendedROAS < breakEvenROAS × 1.2 → flag as HIGH RISK
+  → Break-even check: will new total spend stay above breakEvenROAS?
+
+- **RESTOCK:**
+  → Daily revenue at risk: (grossRevenue / 100) / 7
+  → Total revenue at risk: days until stockout × daily revenue
+  → Compare restock cost (from params) vs total revenue at risk
+
+### OUTPUT FORMAT (MANDATORY — respond ONLY with valid JSON, no markdown, no extra text)
+\`\`\`json
+{
+  "action": "[action type]",
+  "baseCalculation": {
+    "cpa": "[X,XX ${store?.currency || "EUR"}]",
+    "aov": "[X,XX ${store?.currency || "EUR"}]",
+    "dailyAdSpend": "[X,XX ${store?.currency || "EUR"}]"
+  },
+  "optimisticScenario": {
+    "description": "[description]",
+    "estimatedImpact": "[range in ${store?.currency || "EUR"}]",
+    "confidence": 0
+  },
+  "pessimisticScenario": {
+    "description": "[description — must apply 20% rule]",
+    "estimatedImpact": "[range in ${store?.currency || "EUR"}]",
+    "confidence": 0
+  },
+  "haloEffect": "[only for PAUSE_CAMPAIGN — indirect traffic impact estimate]",
+  "attributionWindow": "[when will the impact be visible?]",
+  "overallConfidence": 0,
+  "recommendation": "[one clear sentence in ${store?.language === 'en' ? 'English' : store?.language === 'ca' ? 'Catalan' : 'Spanish'}]",
+  "mainRisk": "[one sentence about the biggest risk]",
+  "dataWindow": "last_7_days"
+}
+\`\`\`
+`,
+  },
+  {
+    role: "user",
+    content: `<user_query>Simulate this action: ${JSON.stringify(actionPayload)}</user_query>`,
+  },
+];
 
     const aiResult = await callAI(messages, {
       storeId,
@@ -419,26 +493,40 @@ async function simulateAction(storeId, action) {
     if (aiResult.error) return { error: aiResult.error };
 
     const sanitized = sanitizeAIOutput(aiResult.content);
-    await ActionLogs.create({
-      storeId,
-      type: "AI_SIMULATION",
-      status: "SUCCESS",
-      message: "Action simulation generated",
-      metadata: { action: action?.type, tokensUsed: aiResult.tokensUsed },
-    });
+   // Limpiamos backticks que GPT puede añadir aunque se le pida JSON puro
+const cleanResponse = sanitized
+  .replace(/```json\s*/gi, "")
+  .replace(/```\s*/gi, "")
+  .trim();
 
-    return {
-      action: action?.type,
-      estimatedImpact: {
-        bestCase: sanitized,
-        worstCase:
-          "Potential downside depends on conversion stability and ad volatility.",
-        confidence:
-          Number(dailyStats[dailyStats.length - 1]?.confidenceScore) || 0,
-      },
-      recommendation: sanitized,
-      dataWindow: "last_7_days",
-    };
+// Intentamos parsear como JSON — si falla devolvemos texto plano sin romper el flujo
+let parsedResult;
+try {
+  parsedResult = JSON.parse(cleanResponse);
+} catch {
+  // Si no es JSON válido lo devolvemos como texto — mejor respuesta parcial que error
+  parsedResult = { recommendation: cleanResponse, dataWindow: "last_7_days" };
+}
+
+await ActionLogs.create({
+  storeId,
+  type: "AI_SIMULATION",
+  status: "SUCCESS",
+  message: "Action simulation generated",
+  metadata: { action: action?.type, tokensUsed: aiResult.tokensUsed },
+});
+
+return {
+  action: action?.type,
+  estimatedImpact: {
+    bestCase: parsedResult?.optimisticScenario?.description ?? cleanResponse,
+    worstCase: parsedResult?.pessimisticScenario?.description ?? "Potential downside depends on conversion stability.",
+    confidence: (parsedResult?.overallConfidence ?? Number(dailyStats[dailyStats.length - 1]?.confidenceScore)) || 0,
+  },
+  recommendation: parsedResult?.recommendation ?? cleanResponse,
+  dataWindow: parsedResult?.dataWindow ?? "last_7_days",
+  fullSimulation: parsedResult,
+};
   } catch (error) {
     await ActionLogs.create({
       storeId,
