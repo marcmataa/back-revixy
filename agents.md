@@ -17,6 +17,7 @@ Identify and follow the specialized skill before any task:
 - Integrations (Shopify/Meta): @skills/integrations.md
 - AI Logic & Insights: @skills/ai_layer.md
 - Authentication & OAuth: @skills/auth.md
+- Internationalization (i18n): @skills/i18n.md
 
 ## 4. UNIVERSAL BUSINESS LOGIC (THE "HOLY GRAIL")
 - **Net Profit:** (Gross Revenue - Refunds) - (Meta Spend + COGS + Gateway Fees + Shipping).
