@@ -158,14 +158,17 @@ const initiateOAuth = async (shop, redirectUri, userId) => {
   return `https://${shop}/admin/oauth/authorize?${params.toString()}`;
 };
 
-const exchangeCodeForToken = async (shop, code, state, userId) => {
-  if (!shop || !code || !state || !userId) {
-    throw new Error("shop, code, state and userId are required");
+// El callback de Shopify no lleva JWT — buscamos el CSRF log por stateHash
+// (SHA-256 de UUID, 256 bits de entropía: seguro sin filtro por userId).
+// Retornamos { accessToken, userId } para que el controller pueda asignar el owner del store.
+const exchangeCodeForToken = async (shop, code, state) => {
+  if (!shop || !code || !state) {
+    throw new Error("shop, code and state are required");
   }
 
   const stateHash = hashValue(state);
+  // Buscamos el log de estado pendiente por hash — sin userId ya que viene del redirect de Shopify
   const csrfLog = await ActionLogs.findOne({
-    userId,
     type: "AUTH_EVENT",
     status: "PENDING",
     "metadata.provider": "shopify",
@@ -174,6 +177,9 @@ const exchangeCodeForToken = async (shop, code, state, userId) => {
   if (!csrfLog) {
     throw new Error("Invalid OAuth state");
   }
+
+  // Recuperamos el userId del log original — creado en initiateOAuth con req.user.id
+  const userId = csrfLog.userId;
 
   try {
     const response = await axios.post(`https://${shop}/admin/oauth/access_token`, {
@@ -184,7 +190,8 @@ const exchangeCodeForToken = async (shop, code, state, userId) => {
     csrfLog.status = "SUCCESS";
     csrfLog.message = "Shopify OAuth state validated";
     await csrfLog.save();
-    return response.data?.access_token;
+    // Retornamos accessToken y userId para que el controller asocie el store al owner correcto
+    return { accessToken: response.data?.access_token, userId };
   } catch (error) {
     await logAction({
       userId,
@@ -274,10 +281,23 @@ const fetchProducts = async (store, params = {}) => {
   }
 };
 
+const disconnectShopify = async (storeId) => {
+  // Limpiamos el token y marcamos el store como REAUTH_REQUIRED.
+  // El ETL worker skipea este estado automáticamente — sin riesgo de API calls con token vacío.
+  // No limpiamos shopifyDomain: el flujo de reconect lo necesita como clave de búsqueda
+  // en handleShopifyCallback (findOneAndUpdate por shopifyDomain con upsert).
+  // runValidators omitido — accessToken: "" no pasaría la validación required del schema.
+  await Store.findByIdAndUpdate(
+    storeId,
+    { $set: { accessToken: "", status: "REAUTH_REQUIRED" } }
+  );
+};
+
 export {
   initiateOAuth,
   exchangeCodeForToken,
   validateWebhookHmac,
   fetchOrders,
   fetchProducts,
+  disconnectShopify,
 };
